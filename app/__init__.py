@@ -1,3 +1,4 @@
+from app import routes, models, glauth, adminview, errors
 from flask import Flask
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
@@ -34,7 +35,8 @@ if not app.debug:
         mail_handler = SMTPHandler(
             mailhost=(app.config['MAIL_SERVER'], app.config['MAIL_PORT']),
             fromaddr='no-reply@' + app.config['MAIL_SERVER'],
-            toaddrs=app.config['MAIL_ADMIN'], subject='{} - Failure'.format(app.config['APPNAME']),
+            toaddrs=app.config['MAIL_ADMIN'], subject='{} - Failure'.format(
+                app.config['APPNAME']),
             credentials=auth, secure=secure)
         mail_handler.setLevel(logging.ERROR)
         app.logger.addHandler(mail_handler)
@@ -49,31 +51,34 @@ if not app.debug:
     app.logger.addHandler(file_handler)
 
     app.logger.setLevel(logging.INFO)
-    app.logger.info('Glauth UI')       
+    app.logger.info('Glauth UI')
 
     if app.config['SECRET_KEY'] == 'you-will-never-guess':
-        app.logger.warning('No unique SECRET_KEY set to secure the application.\n \
+        app.logger.warning(
+            'No unique SECRET_KEY set to secure the application.\n \
                             You can the following randomly generated key:\n \
                             {}'.format(token_urlsafe(50)))
         exit()
 
 # Security - Generate GLAUTH compatible password hashs
+
+
 def generate_password_hash(password):
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
 
 def check_password_hash(hash, password):
     if (hash != hashlib.sha256(password.encode('utf-8')).hexdigest()):
         return False
     return True
 
-from app import routes, models, glauth, adminview, errors
 
 @app.cli.command()
 def createdbdata():
     """Creating example db"""
     if models.User.query.count() == 0:
-        app.logger.info('No Data in DB, creating example dataset') 
+        app.logger.info('No Data in DB, creating example dataset')
         click.echo('Creating Example DB')
         models.create_basic_db()
     else:
-        app.logger.info('Data in DB allready exists.') 
+        app.logger.info('Data in DB allready exists.')

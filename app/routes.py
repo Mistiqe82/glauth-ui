@@ -1,6 +1,6 @@
 from flask import render_template, flash, redirect, url_for, request, abort
 from app import app, db
-from app.forms import LoginForm, EditProfileForm, ChangePasswordForm 
+from app.forms import LoginForm, EditProfileForm, ChangePasswordForm
 from app.forms import ResetPasswordRequestForm, ResetPasswordForm, NewAccountForm
 from app.forms import TestMailForm
 from flask_login import current_user, login_user, logout_user, login_required
@@ -10,12 +10,18 @@ from werkzeug.urls import url_parse
 from app.glauth import create_glauth_config
 from ipaddress import ip_network, ip_address
 
+
 @app.route('/')
 @app.route('/index')
 @login_required
 def index():
-    pgroup_name = Group.query.filter_by(unixid=current_user.primarygroup).first().name
-    return render_template("index.html", title='Profile', primarygroup=pgroup_name)
+    pgroup_name = Group.query.filter_by(
+        unixid=current_user.primarygroup).first().name
+    return render_template(
+        "index.html",
+        title='Profile',
+        primarygroup=pgroup_name)
+
 
 @app.route('/testmail', methods=['GET', 'POST'])
 @login_required
@@ -30,40 +36,44 @@ def testmail():
         return redirect(url_for('index'))
     return render_template('testmail.html', title='TEST MAIL', form=form)
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    
+
     if 'X-Forwarded-For' in request.headers:
-        remote_addr = request.headers.get('X-Forwarded-For',None)
+        remote_addr = request.headers.get('X-Forwarded-For', None)
     else:
         remote_addr = request.remote_addr or 'untrackable'
 
-    form = LoginForm() 
+    form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user is None or not user.check_password(form.password.data):
             flash('Invalid username or password')
-            app.logger.warning(f'Failed login attempt with user {form.username.data} from {str(remote_addr)}')
+            app.logger.warning(
+                f'Failed login attempt with user {form.username.data} from {str(remote_addr)}')
             return redirect(url_for('login'))
         elif user is not None and (user.is_active == False):
             flash('Account has been disabled, contact Administrator.')
             return redirect(url_for('login'))
-        elif user is not None and (user.mail is None or user.mail==''):
+        elif user is not None and (user.mail is None or user.mail == ''):
             flash('Account not eligable to login.')
             return redirect(url_for('login'))
         login_user(user, remember=form.remember_me.data)
         next_page = request.args.get('next')
-        if not next_page or url_parse(next_page).netloc != '':    
+        if not next_page or url_parse(next_page).netloc != '':
             return redirect(url_for('index'))
         return redirect(next_page)
     return render_template('login.html', title='Sign In', form=form)
+
 
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
     logout_user()
     return redirect(url_for('index'))
+
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
@@ -90,6 +100,8 @@ def edit_profile():
                            form=form)
 
 # Password Change Form
+
+
 @app.route('/change_password', methods=['GET', 'POST'])
 @login_required
 def change_password():
@@ -109,7 +121,11 @@ def change_password():
         form.oldpassword.data = ""
         form.newpassword1.data = ""
         form.newpassword2.data = ""
-    return render_template('change_password.html', title='Change Password', form=form)
+    return render_template(
+        'change_password.html',
+        title='Change Password',
+        form=form)
+
 
 @app.route('/reset_password_request', methods=['GET', 'POST'])
 def reset_password_request():
@@ -125,6 +141,7 @@ def reset_password_request():
         return redirect(url_for('login'))
     return render_template('reset_password_request.html',
                            title='Reset Password', form=form)
+
 
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
@@ -147,6 +164,7 @@ def reset_password(token):
     fullname = f'{user.givenname} {user.surname}'
     return render_template('reset_password.html', form=form, fullname=fullname)
 
+
 @app.route('/new_account/<token>', methods=['GET', 'POST'])
 def new_account(token):
     if current_user.is_authenticated:
@@ -166,7 +184,12 @@ def new_account(token):
             flash('Your password was not set: ' + str(exc))
         return redirect(url_for('login'))
     fullname = f'{user.givenname} {user.surname}'
-    return render_template('new_account.html', title='Activate Account', form=form, fullname=fullname)
+    return render_template(
+        'new_account.html',
+        title='Activate Account',
+        form=form,
+        fullname=fullname)
+
 
 @app.route('/forward_auth/header/', methods=['GET', 'POST'])
 def forward_auth():
@@ -176,12 +199,12 @@ def forward_auth():
     host = request.headers.get('X-Forwarded-Host')
     uri = request.headers.get('X-Forwarded-Uri')
 
-    #Whitelist based on IP address
-    sourceIp=request.headers.get('X-Forwarded-For',None)     
+    # Whitelist based on IP address
+    sourceIp = request.headers.get('X-Forwarded-For', None)
     if sourceIp in request.args.getlist('ip'):
         return "", 201
 
-    #Whitelist based on CIDR netmask
+    # Whitelist based on CIDR netmask
     for net in request.args.getlist('network'):
         net = ip_network(net)
         if sourceIp and ip_address(sourceIp) in net:
@@ -189,16 +212,17 @@ def forward_auth():
 
     if current_user.is_anonymous:
         return "", 401
-            
+
     allowed_groups = request.args.getlist('group')
     if current_user.is_authenticated:
         if allowed_groups:
             if current_user.in_groups(*allowed_groups):
                 return "", 201
-        else:    
+        else:
             return "", 201
-    
+
     return "", 403
+
 
 @app.route('/forward_auth/forbidden')
 def not_allowed():
