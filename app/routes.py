@@ -15,7 +15,6 @@ from ipaddress import ip_network, ip_address
 @login_required
 def index():
     pgroup_name = Group.query.filter_by(unixid=current_user.primarygroup).first().name
-    #return render_template('index.html', title='Home', user=user)
     return render_template("index.html", title='Profile', primarygroup=pgroup_name)
 
 @app.route('/testmail', methods=['GET', 'POST'])
@@ -27,7 +26,7 @@ def testmail():
     form = TestMailForm()
     if form.validate_on_submit():
         send_test_mail(form.mail.data)
-        flash('Test mail send to {}'.format(form.mail.data))
+        flash(f'Test mail send to {form.mail.data}')
         return redirect(url_for('index'))
     return render_template('testmail.html', title='TEST MAIL', form=form)
 
@@ -46,9 +45,7 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user is None or not user.check_password(form.password.data):
             flash('Invalid username or password')
-            app.logger.warning('Failed login attempt with user {} from {}'.format(
-                form.username.data, 
-                str(remote_addr)))
+            app.logger.warning(f'Failed login attempt with user {form.username.data} from {str(remote_addr)}')
             return redirect(url_for('login'))
         elif user is not None and (user.is_active == False):
             flash('Account has been disabled, contact Administrator.')
@@ -110,8 +107,8 @@ def change_password():
         return redirect(url_for('index'))
     elif request.method == 'GET':
         form.oldpassword.data = ""
-        form.newpassword1.data = current_user.surname
-        form.newpassword2.data = current_user.mail
+        form.newpassword1.data = ""
+        form.newpassword2.data = ""
     return render_template('change_password.html', title='Change Password', form=form)
 
 @app.route('/reset_password_request', methods=['GET', 'POST'])
@@ -147,7 +144,7 @@ def reset_password(token):
         except Exception as exc:
             flash('Your password was not reset: ' + str(exc))
         return redirect(url_for('login'))
-    fullname = '{}'.format(user.givenname + ' ' + user.surname)
+    fullname = f'{user.givenname} {user.surname}'
     return render_template('reset_password.html', form=form, fullname=fullname)
 
 @app.route('/new_account/<token>', methods=['GET', 'POST'])
@@ -168,7 +165,7 @@ def new_account(token):
         except Exception as exc:
             flash('Your password was not set: ' + str(exc))
         return redirect(url_for('login'))
-    fullname = '{}'.format(user.givenname + ' ' + user.surname)
+    fullname = f'{user.givenname} {user.surname}'
     return render_template('new_account.html', title='Activate Account', form=form, fullname=fullname)
 
 @app.route('/forward_auth/header/', methods=['GET', 'POST'])
